@@ -1,5 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -24,7 +25,6 @@ import {
 } from "@/src/components/ui/form";
 import { Input } from "@/src/components/ui/input";
 import { authClient } from "@/src/lib/auth-client";
-import { Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
   email: z
@@ -56,9 +56,7 @@ const LoginForm = () => {
           router.push("/dashboard");
         },
         onError: () => {
-          toast.error(
-            "Email ou senha inválidos. Tente novamente.",
-          );
+          toast.error("Email ou senha inválidos. Tente novamente.");
         },
       }
     );
@@ -106,7 +104,7 @@ const LoginForm = () => {
             />
           </CardContent>
           <CardFooter>
-             <Button
+            <Button
               type="submit"
               className="w-full"
               disabled={form.formState.isSubmitting}
