@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -10,11 +11,20 @@ import {
   PageHeaderContent,
   PageTitle,
 } from "@/src/components/ui/page-container";
+import { getDashboard } from "@/src/data/get-dashboard";
 import { auth } from "@/src/lib/auth";
 
 import { DatePicker } from "./components/date-picker";
+import StatsCards from "./components/stats-cards";
 
-const DashboardPage = async () => {
+interface DashboardPageProps {
+  searchParams: Promise<{
+    from: string;
+    to: string;
+  }>;
+}
+
+const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
@@ -25,6 +35,24 @@ const DashboardPage = async () => {
   if (!session.user.clinic) {
     redirect("/clinic-form");
   }
+  const { from, to } = await searchParams;
+  if (!from || !to) {
+    redirect(
+      `/dashboard?from=${dayjs().format("YYYY-MM-DD")}&to=${dayjs().add(1, "month").format("YYYY-MM-DD")}`
+    );
+  }
+  const { totalRevenue, totalAppointments, totalPatients, totalDoctors } =
+    await getDashboard({
+      from,
+      to,
+      session: {
+        user: {
+          clinic: {
+            id: session.user.clinic.id,
+          },
+        },
+      },
+    });
 
   return (
     <PageContainer>
@@ -40,7 +68,12 @@ const DashboardPage = async () => {
         </PageActions>
       </PageHeader>
       <PageContent>
-        <h1>OII</h1>
+        <StatsCards
+          totalRevenue={totalRevenue.total ? Number(totalRevenue.total) : null}
+          totalAppointments={totalAppointments.total}
+          totalPatients={totalPatients.total}
+          totalDoctors={totalDoctors.total}
+        />
       </PageContent>
     </PageContainer>
   );
