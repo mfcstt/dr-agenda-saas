@@ -1,12 +1,8 @@
 "use client";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@radix-ui/react-dropdown-menu";
+
 import {
   CalendarDays,
+  Gem,
   LayoutDashboard,
   LogOut,
   Stethoscope,
@@ -17,6 +13,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { Avatar, AvatarFallback } from "@/src/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/src/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -31,7 +33,6 @@ import {
 } from "@/src/components/ui/sidebar";
 import { authClient } from "@/src/lib/auth-client";
 
-// Menu items.
 const items = [
   {
     title: "Dashboard",
@@ -71,8 +72,8 @@ export function AppSidebar() {
   };
   return (
     <Sidebar>
-      <SidebarHeader className="p-4 border-b">
-        <Image src="/logo.svg" alt="Dr. Agenda" width={136} height={128} />
+      <SidebarHeader className="border-b p-4">
+        <Image src="/logo.svg" alt="Doutor Agenda" width={136} height={28} />
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -92,6 +93,24 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Outros</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/subscription"}
+                >
+                  <Link href="/subscription">
+                    <Gem />
+                    <span>Assinatura</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -100,11 +119,13 @@ export function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton size="lg">
                   <Avatar>
-                    <AvatarFallback></AvatarFallback>
+                    <AvatarFallback>F</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm">{session.data?.user?.clinic.name}</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm">
+                      {session.data?.user?.clinic?.name}
+                    </p>
+                    <p className="text-muted-foreground text-sm">
                       {session.data?.user.email}
                     </p>
                   </div>
@@ -112,7 +133,8 @@ export function AppSidebar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut>Sair</LogOut>
+                  <LogOut />
+                  Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
