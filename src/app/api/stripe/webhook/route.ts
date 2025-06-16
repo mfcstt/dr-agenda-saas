@@ -23,36 +23,59 @@ export const POST = async (request: Request) => {
     process.env.STRIPE_WEBHOOK_SECRET
   );
 
+  console.log("Webhook recebido:", event.type);
+  console.log("Dados do evento:", JSON.stringify(event.data.object, null, 2));
+
   switch (event.type) {
     case "invoice.paid": {
       if (!event.data.object.id) {
-        throw new Error("Subscription ID not found");
+        throw new Error("Invoice ID not found");
       }
-      const { subscription, subscription_details, customer } = event.data
-        .object as unknown as {
+      const { customer, parent, lines } = event.data.object as unknown as {
         customer: string;
-        subscription: string;
-        subscription_details: {
-          metadata: {
-            userId: string;
+        parent: {
+          subscription_details: {
+            subscription: string;
           };
         };
+        lines: {
+          data: Array<{
+            metadata: {
+              userId: string;
+            };
+          }>;
+        };
       };
-      if (!subscription) {
+      if (!parent?.subscription_details?.subscription) {
         throw new Error("Subscription not found");
       }
-      const userId = subscription_details.metadata.userId;
+      const userId = lines.data[0]?.metadata?.userId;
       if (!userId) {
         throw new Error("User ID not found");
       }
-      await db
-        .update(usersTable)
-        .set({
-          stripeSubscriptionId: subscription,
-          stripeCustomerId: customer,
-          plan: "essential",
-        })
-        .where(eq(usersTable.id, userId));
+
+      console.log("Dados para atualização:", {
+        userId,
+        subscription: parent.subscription_details.subscription,
+        customer,
+      });
+
+      try {
+        const result = await db
+          .update(usersTable)
+          .set({
+            stripeSubscriptionId: parent.subscription_details.subscription,
+            stripeCustomerId: customer,
+            plan: "essential",
+          })
+          .where(eq(usersTable.id, userId))
+          .returning();
+
+        console.log("Resultado da atualização:", result);
+      } catch (error) {
+        console.error("Erro ao atualizar usuário:", error);
+        throw error;
+      }
       break;
     }
     case "customer.subscription.deleted": {
@@ -69,14 +92,22 @@ export const POST = async (request: Request) => {
       if (!userId) {
         throw new Error("User ID not found");
       }
-      await db
-        .update(usersTable)
-        .set({
-          stripeSubscriptionId: null,
-          stripeCustomerId: null,
-          plan: null,
-        })
-        .where(eq(usersTable.id, userId));
+      try {
+        const result = await db
+          .update(usersTable)
+          .set({
+            stripeSubscriptionId: null,
+            stripeCustomerId: null,
+            plan: null,
+          })
+          .where(eq(usersTable.id, userId))
+          .returning();
+
+        console.log("Resultado da atualização (deleção):", result);
+      } catch (error) {
+        console.error("Erro ao atualizar usuário (deleção):", error);
+        throw error;
+      }
     }
   }
   return NextResponse.json({

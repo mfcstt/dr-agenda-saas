@@ -4,6 +4,7 @@ import { customSession } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 
 import * as schema from "@/src/db/schema";
+import { usersTable, usersToClinicsTable } from "@/src/db/schema";
 
 import { db } from "../db";
 
@@ -15,27 +16,35 @@ export const auth = betterAuth({
   }),
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     },
   },
   plugins: [
     customSession(async ({ user, session }) => {
-      const clinics = await db.query.usersToClinicsTable.findMany({
-        where: eq(schema.usersToClinicsTable.userId, user.id),
-        with: {
-          clinic: true,
-        }
-      });
-      // TODO: Adapt this to handle multiple clinics
+      // TODO: colocar cache
+      const [userData, clinics] = await Promise.all([
+        db.query.usersTable.findFirst({
+          where: eq(usersTable.id, user.id),
+        }),
+        db.query.usersToClinicsTable.findMany({
+          where: eq(usersToClinicsTable.userId, user.id),
+          with: {
+            clinic: true,
+            user: true,
+          },
+        }),
+      ]);
+      // TODO: Ao adaptar para o usuário ter múltiplas clínicas, deve-se mudar esse código
       const clinic = clinics?.[0];
       return {
         user: {
           ...user,
-          clinic: clinic && clinic.clinicId
+          plan: userData?.plan,
+          clinic: clinic?.clinicId
             ? {
-                id: clinic.clinicId,
-                name: clinic.clinic.name,
+                id: clinic?.clinicId,
+                name: clinic?.clinic?.name,
               }
             : undefined,
         },
@@ -45,6 +54,23 @@ export const auth = betterAuth({
   ],
   user: {
     modelName: "usersTable",
+    additionalFields: {
+      stripeCustomerId: {
+        type: "string",
+        fieldName: "stripeCustomerId",
+        required: false,
+      },
+      stripeSubscriptionId: {
+        type: "string",
+        fieldName: "stripeSubscriptionId",
+        required: false,
+      },
+      plan: {
+        type: "string",
+        fieldName: "plan",
+        required: false,
+      },
+    },
   },
   session: {
     modelName: "sessionsTable",
